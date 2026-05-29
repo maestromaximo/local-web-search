@@ -1,0 +1,40 @@
+[build-system]
+requires = ["hatchling>=1.26"]
+build-backend = "hatchling.build"
+
+[project]
+name = "local-agentic-search"
+version = "0.1.0"
+description = "Agent-friendly local web search using SearXNG for snippets and Crawl4AI for full-text retrieval."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+  { name = "LocalSearch contributors" }
+]
+dependencies = [
+  "Crawl4AI>=0.8.6",
+  "httpx>=0.27",
+  "pydantic>=2.8",
+]
+
+[project.optional-dependencies]
+agents = ["openai-agents>=0.15"]
+server = ["fastapi>=0.115", "uvicorn[standard]>=0.30"]
+dev = ["pytest>=8.2", "ruff>=0.6"]
+
+[project.scripts]
+local-web-search = "local_agentic_search.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/local_agentic_search"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
