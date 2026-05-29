@@ -1,29 +1,88 @@
 # Local Web Search
 
-Local Web Search is an agent-friendly local web search backend. It gives agents
-two simple tools:
+<p align="center">
+  <img src="local-web-search-logo.png" alt="Local Web Search logo" width="220">
+</p>
 
-- `web_search` asks a local SearXNG instance for search results and returns
+<p align="center">
+  <a href="https://github.com/maestromaximo/local-web-search/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/maestromaximo/local-web-search/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://github.com/maestromaximo/local-web-search/actions/workflows/publish.yml"><img alt="Publish to PyPI" src="https://github.com/maestromaximo/local-web-search/actions/workflows/publish.yml/badge.svg"></a>
+  <a href="https://pypi.org/project/local-web-search/"><img alt="PyPI" src="https://img.shields.io/pypi/v/local-web-search.svg"></a>
+  <a href="https://pypi.org/project/local-web-search/"><img alt="Python versions" src="https://img.shields.io/pypi/pyversions/local-web-search.svg"></a>
+  <a href="https://github.com/maestromaximo/local-web-search/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/github/license/maestromaximo/local-web-search.svg"></a>
+  <a href="https://github.com/maestromaximo/local-web-search/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/maestromaximo/local-web-search?style=social"></a>
+</p>
+
+Local Web Search gives AI agents a local web-search backend with two familiar
+tools:
+
+- `web_search` asks your local SearXNG instance for search results and returns
   compact snippets.
 - `web_fetch` uses Crawl4AI to fetch full page text only when the agent asks for
   a specific result.
 
-SQLite caching keeps result IDs and fetched page text stable across tool calls.
-The tool names intentionally look like normal web tools, but all execution
-happens in your local environment.
+The short version:
+
+```powershell
+pip install local-web-search
+```
+
+That is the normal install. Use the plain command exactly as shown; there is no
+module-wrapper command or special bootstrap step for the package itself.
+
+## What It Does
+
+Local Web Search keeps web discovery local. Your agent searches first, gets
+small result snippets with stable `result_id` values, then fetches full page text
+only for the result it actually needs. SQLite caching keeps result IDs and page
+text stable across calls, so an agent can search, reason, fetch, and continue
+without losing track of sources.
+
+```mermaid
+flowchart LR
+    Agent["Agent or app"] --> Search["web_search(query)"]
+    Search --> Service["Local Web Search"]
+    Service --> Cache[("SQLite cache")]
+    Service --> SearXNG["Local SearXNG"]
+    SearXNG --> Results["Snippets + result_id"]
+    Results --> Agent
+    Agent --> Fetch["web_fetch(result_id)"]
+    Fetch --> Service
+    Service --> Crawl4AI["Crawl4AI"]
+    Crawl4AI --> Page["Full page text slice"]
+    Page --> Agent
+```
+
+Why this shape works:
+
+- Agents see normal tool names: `web_search` for discovery and `web_fetch` for
+  source text.
+- Search results stay compact, which keeps context windows cleaner.
+- Full page fetches are deliberate, cached, and bounded by character limits.
+- Execution happens in your local environment, pointed at your local SearXNG
+  service.
 
 ## Install
 
+Install the package:
+
 ```powershell
-python -m pip install local-web-search
+pip install local-web-search
 ```
 
-Install optional integrations as needed:
+Then point it at a SearXNG instance. If you cloned this repository, the bundled
+Docker Compose setup can start one for you:
 
 ```powershell
-python -m pip install "local-web-search[server]"
-python -m pip install "local-web-search[agents]"
-python -m pip install "local-web-search[server,agents]"
+docker compose up -d searxng
+local-web-search doctor
+```
+
+If you already run SearXNG somewhere else, set `SEARXNG_BASE_URL` instead:
+
+```powershell
+$env:SEARXNG_BASE_URL = "http://127.0.0.1:8888"
+local-web-search doctor
 ```
 
 The Python import package is `local_agentic_search`:
@@ -32,7 +91,36 @@ The Python import package is `local_agentic_search`:
 from local_agentic_search import LocalSearchService
 ```
 
-## Quick Start
+## Optional Integrations
+
+Most users do not need extras. Start with:
+
+```powershell
+pip install local-web-search
+```
+
+Use an extra only when you need the integration it names:
+
+```powershell
+pip install "local-web-search[server]"
+pip install "local-web-search[agents]"
+pip install "local-web-search[server,agents]"
+```
+
+What each extra adds:
+
+| Install | Adds | Use it when | Why it is normally not needed |
+| --- | --- | --- | --- |
+| `local-web-search` | CLI, Python service, SearXNG client, Crawl4AI fetch support | You want local search/fetch from the CLI or your own Python code | This is the normal path |
+| `local-web-search[server]` | FastAPI and Uvicorn | You want `local-web-search serve` and HTTP routes | The CLI and direct Python imports do not need an HTTP server |
+| `local-web-search[agents]` | OpenAI Agents SDK adapter | You want ready-made `web_search` and `web_fetch` tools for an `Agent` | The CLI, HTTP API, and custom tool loops do not need the Agents SDK |
+| `local-web-search[server,agents]` | Both integration layers | You want both the HTTP API and OpenAI Agents SDK helper tools | Most projects use one integration layer at a time |
+
+The integrations are intentionally separate because the base package already
+does the core job. The extras keep optional framework dependencies out of your
+environment until you actually need them.
+
+## Quick Start From This Repo
 
 Clone the repository if you want the bundled Docker Compose SearXNG setup:
 
@@ -40,8 +128,8 @@ Clone the repository if you want the bundled Docker Compose SearXNG setup:
 git clone https://github.com/maestromaximo/local-web-search.git
 cd local-web-search
 docker compose up -d searxng
-python -m pip install -e ".[server,agents,dev]"
-python -m crawl4ai-setup
+pip install -e ".[server,agents,dev]"
+crawl4ai-setup
 ```
 
 Check that SearXNG is reachable:
@@ -88,6 +176,14 @@ Run `local-web-search --help` or `local-web-search <command> --help` for the
 full command reference.
 
 ## OpenAI Agents SDK Usage
+
+Install the Agents SDK integration only for this path:
+
+```powershell
+pip install "local-web-search[agents]"
+```
+
+Then build tools named `web_search` and `web_fetch`:
 
 ```python
 from agents import Agent, Runner
@@ -145,7 +241,8 @@ web_search, web_fetch = build_agent_tools(suppress_docker_warning=True)
 
 ## Responses API Tool Schemas
 
-For direct OpenAI API tool loops, use:
+You do not need the `agents` extra for direct OpenAI API tool loops. Use the
+schema helper:
 
 ```python
 from local_agentic_search.tool_schemas import responses_tool_schemas
@@ -157,6 +254,12 @@ Your application still executes `web_search` and `web_fetch` locally and returns
 their JSON outputs as function call outputs.
 
 ## HTTP API
+
+Install the server integration only for this path:
+
+```powershell
+pip install "local-web-search[server]"
+```
 
 Start the server with:
 
@@ -180,6 +283,13 @@ See `examples/http_client_example.py` for a minimal async HTTP client.
   `web_search` and `web_fetch`.
 - `examples/http_client_example.py`: call the local HTTP API with `httpx`.
 - `examples/responses_schema_example.py`: print the Responses API tool schemas.
+
+## Star Tracker
+
+If Local Web Search saves you from wiring search tools by hand, starring the
+repo helps track interest and keeps the project visible:
+
+[![GitHub stars](https://img.shields.io/github/stars/maestromaximo/local-web-search?style=social)](https://github.com/maestromaximo/local-web-search/stargazers)
 
 ## Search Result Shape
 
