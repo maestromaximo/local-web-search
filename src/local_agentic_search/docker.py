@@ -28,7 +28,7 @@ def warn_docker_not_managed(*, suppress: bool = False) -> None:
     reset = "\033[0m"
     print(
         (
-            f"{yellow}Local Agentic Search assumes SearXNG is already running. "
+            f"{yellow}Local Web Search assumes SearXNG is already running. "
             "Make sure Docker is running and start it with "
             "`docker compose up -d searxng`, or pass "
             f"`build_container_if_missing=True` to start it automatically.{reset}"
@@ -103,7 +103,7 @@ def _warn_container_will_be_started(container_name: str) -> None:
     reset = "\033[0m"
     print(
         (
-            f"{yellow}Local Agentic Search container {container_name!r} was not found "
+            f"{yellow}Local Web Search container {container_name!r} was not found "
             f"or is stopped. Building and starting it with docker compose...{reset}"
         ),
         file=sys.stderr,
@@ -115,7 +115,7 @@ def _warn_container_will_be_unpaused(container_name: str) -> None:
     reset = "\033[0m"
     print(
         (
-            f"{yellow}Local Agentic Search container {container_name!r} is paused. "
+            f"{yellow}Local Web Search container {container_name!r} is paused. "
             f"Unpausing it before using web search...{reset}"
         ),
         file=sys.stderr,
@@ -183,7 +183,7 @@ def _resolve_compose_file(compose_file: str | Path | None) -> Path:
     path = path.resolve()
     if not path.exists():
         raise RuntimeError(
-            "Could not find docker-compose.yml for Local Agentic Search. "
+            "Could not find docker-compose.yml for Local Web Search. "
             f"Set {_COMPOSE_FILE_ENV} to the compose file path."
         )
     return path

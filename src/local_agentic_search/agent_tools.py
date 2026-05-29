@@ -98,7 +98,7 @@ def build_agent_tools(
     except ImportError as exc:
         raise RuntimeError(
             "OpenAI Agents SDK is not installed. Install with "
-            "`pip install local-agentic-search[agents]`."
+            "`pip install local-web-search[agents]`."
         ) from exc
 
     if build_container_if_missing:

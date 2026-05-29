@@ -12,10 +12,10 @@ def create_app() -> Any:
         from fastapi import FastAPI, HTTPException
     except ImportError as exc:
         raise RuntimeError(
-            "FastAPI is not installed. Install with `pip install local-agentic-search[server]`."
+            "FastAPI is not installed. Install with `pip install local-web-search[server]`."
         ) from exc
 
-    app = FastAPI(title="Local Agentic Search", version="0.1.0")
+    app = FastAPI(title="Local Web Search", version="0.1.0")
     service = LocalSearchService.from_env()
 
     @app.get("/health")

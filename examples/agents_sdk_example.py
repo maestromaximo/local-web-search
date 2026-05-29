@@ -14,7 +14,7 @@ agent = Agent(
         "Use web_search when current web information is useful. Search results are snippets. "
         "Call web_fetch with a result_id before relying on page details not present in a snippet."
     ),
-    model="gpt-5.4-mini",
+    model="gpt-4.1-mini",
     tools=[web_search, web_fetch],
 )
 

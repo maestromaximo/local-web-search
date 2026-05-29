@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import sys
 from typing import Any
 
 from local_agentic_search.service import LocalSearchService
@@ -49,7 +50,7 @@ def _serve(args: argparse.Namespace) -> int:
         import uvicorn
     except ImportError as exc:
         raise RuntimeError(
-            "uvicorn is not installed. Install with `pip install local-agentic-search[server]`."
+            "uvicorn is not installed. Install with `pip install local-web-search[server]`."
         ) from exc
     uvicorn.run(
         "local_agentic_search.server:app",
@@ -60,34 +61,100 @@ def _serve(args: argparse.Namespace) -> int:
     return 0
 
 
+async def _doctor(args: argparse.Namespace) -> int:
+    service = LocalSearchService.from_env()
+    health = await service.health()
+    _print_json(health)
+    if health["ok"]:
+        return 0
+    print(
+        (
+            "SearXNG is not reachable. Start it with `docker compose up -d searxng` "
+            "or set SEARXNG_BASE_URL to a running instance."
+        ),
+        file=sys.stderr,
+    )
+    return 1
+
+
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="local-web-search")
+    parser = argparse.ArgumentParser(
+        prog="local-web-search",
+        description=(
+            "Agent-friendly local web search using SearXNG for snippets and Crawl4AI "
+            "for full-text retrieval."
+        ),
+        epilog=(
+            "Examples:\n"
+            "  local-web-search doctor\n"
+            "  local-web-search search \"OpenAI Agents SDK tools\" --max-results 5\n"
+            "  local-web-search fetch res_abc123 --max-chars 4000\n"
+            "  local-web-search fetch https://example.com --max-chars 4000\n"
+            "  local-web-search serve --host 127.0.0.1 --port 8099"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     subcommands = parser.add_subparsers(dest="command", required=True)
 
-    search = subcommands.add_parser("search", help="Search the web through SearXNG.")
-    search.add_argument("query")
-    search.add_argument("--max-results", type=int, default=5)
-    search.add_argument("--page", type=int, default=1)
-    search.add_argument("--language")
-    search.add_argument("--categories")
-    search.add_argument("--engines")
-    search.add_argument("--time-range", choices=["day", "month", "year"])
-    search.add_argument("--safesearch", type=int, choices=[0, 1, 2], default=0)
-    search.add_argument("--refresh", action="store_true")
+    search = subcommands.add_parser(
+        "search",
+        help="Search the web through SearXNG and return result IDs.",
+        description=(
+            "Search through the configured SearXNG instance. Results include snippets "
+            "and stable result_id values that can be passed to `fetch`."
+        ),
+    )
+    search.add_argument("query", help="Search query.")
+    search.add_argument("--max-results", type=int, default=5, help="Number of results, 1-20.")
+    search.add_argument("--page", type=int, default=1, help="SearXNG result page number.")
+    search.add_argument("--language", help="Optional SearXNG language code, such as en.")
+    search.add_argument("--categories", help="Optional comma-separated SearXNG categories.")
+    search.add_argument("--engines", help="Optional comma-separated SearXNG engine names.")
+    search.add_argument(
+        "--time-range",
+        choices=["day", "month", "year"],
+        help="Optional recency filter.",
+    )
+    search.add_argument(
+        "--safesearch",
+        type=int,
+        choices=[0, 1, 2],
+        default=0,
+        help="SearXNG safesearch level: 0 off, 1 moderate, 2 strict.",
+    )
+    search.add_argument("--refresh", action="store_true", help="Bypass cached search results.")
     search.set_defaults(func=lambda args: asyncio.run(_search(args)))
 
-    fetch = subcommands.add_parser("fetch", help="Fetch page text by result_id or URL.")
-    fetch.add_argument("result_id_or_url")
-    fetch.add_argument("--start", type=int, default=0)
-    fetch.add_argument("--max-chars", type=int)
-    fetch.add_argument("--refresh", action="store_true")
+    fetch = subcommands.add_parser(
+        "fetch",
+        help="Fetch full page text by result_id or URL.",
+        description=(
+            "Fetch extracted page text with Crawl4AI. Prefer a result_id returned by "
+            "`search`; direct http(s) URLs are also accepted."
+        ),
+    )
+    fetch.add_argument("result_id_or_url", help="Result ID from search output, or a URL.")
+    fetch.add_argument("--start", type=int, default=0, help="Character offset to start at.")
+    fetch.add_argument("--max-chars", type=int, help="Maximum characters to return.")
+    fetch.add_argument("--refresh", action="store_true", help="Bypass cached page text.")
     fetch.set_defaults(func=lambda args: asyncio.run(_fetch(args)))
 
-    serve = subcommands.add_parser("serve", help="Run the HTTP API.")
-    serve.add_argument("--host", default="127.0.0.1")
-    serve.add_argument("--port", type=int, default=8099)
-    serve.add_argument("--reload", action="store_true")
+    serve = subcommands.add_parser(
+        "serve",
+        help="Run the optional HTTP API.",
+        description="Run a FastAPI server exposing health, search, fetch, and tool-schema routes.",
+    )
+    serve.add_argument("--host", default="127.0.0.1", help="Host to bind.")
+    serve.add_argument("--port", type=int, default=8099, help="Port to bind.")
+    serve.add_argument("--reload", action="store_true", help="Enable uvicorn reload.")
     serve.set_defaults(func=_serve)
+
+    doctor = subcommands.add_parser(
+        "doctor",
+        help="Check configuration and SearXNG connectivity.",
+        description="Print the active configuration and whether the SearXNG endpoint is reachable.",
+    )
+    doctor.set_defaults(func=lambda args: asyncio.run(_doctor(args)))
 
     return parser
 

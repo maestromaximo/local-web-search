@@ -3,25 +3,42 @@ requires = ["hatchling>=1.26"]
 build-backend = "hatchling.build"
 
 [project]
-name = "local-agentic-search"
+name = "local-web-search"
 version = "0.1.0"
 description = "Agent-friendly local web search using SearXNG for snippets and Crawl4AI for full-text retrieval."
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "MIT" }
+license = "Apache-2.0"
 authors = [
-  { name = "LocalSearch contributors" }
+  { name = "Local Web Search contributors" }
 ]
 dependencies = [
   "Crawl4AI>=0.8.6",
   "httpx>=0.27",
   "pydantic>=2.8",
 ]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Internet :: WWW/HTTP :: Indexing/Search",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+]
 
 [project.optional-dependencies]
 agents = ["openai-agents>=0.15"]
 server = ["fastapi>=0.115", "uvicorn[standard]>=0.30"]
-dev = ["pytest>=8.2", "ruff>=0.6"]
+dev = ["build>=1.2", "pytest>=8.2", "ruff>=0.6", "twine>=5.1"]
+
+[project.urls]
+Homepage = "https://github.com/maestromaximo/local-web-search"
+Repository = "https://github.com/maestromaximo/local-web-search"
+Issues = "https://github.com/maestromaximo/local-web-search/issues"
 
 [project.scripts]
 local-web-search = "local_agentic_search.cli:main"

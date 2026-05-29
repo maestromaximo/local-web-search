@@ -96,6 +96,22 @@ def test_responses_tool_schemas_are_named_for_web_tools() -> None:
     assert all(schema["type"] == "function" for schema in schemas)
 
 
+def test_cli_help_includes_examples(capsys) -> None:
+    from local_agentic_search.cli import build_parser
+
+    parser = build_parser()
+
+    try:
+        parser.parse_args(["--help"])
+    except SystemExit as exc:
+        assert exc.code == 0
+
+    captured = capsys.readouterr()
+    assert "Examples:" in captured.out
+    assert "local-web-search doctor" in captured.out
+    assert "local-web-search search" in captured.out
+
+
 def test_search_normalizes_time_range_shorthand(tmp_path: Path) -> None:
     service = _service(tmp_path)
     asyncio.run(service.search("example", time_range="y", refresh=True))
@@ -230,5 +246,5 @@ def test_docker_warning_is_yellow_and_suppressible(capsys) -> None:
 
     assert "\033[33m" in first.err
     assert "Make sure Docker is running" in first.err
-    assert first.err.count("Local Agentic Search assumes SearXNG") == 1
+    assert first.err.count("Local Web Search assumes SearXNG") == 1
     assert second.err == ""
