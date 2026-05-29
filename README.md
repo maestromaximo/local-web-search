@@ -21,14 +21,57 @@ tools:
 - `web_fetch` uses Crawl4AI to fetch full page text only when the agent asks for
   a specific result.
 
-The short version:
+## Quick Start: OpenAI Agents SDK
+
+Install Local Web Search:
 
 ```powershell
 pip install local-web-search
 ```
 
-That is the normal install. Use the plain command exactly as shown; there is no
-module-wrapper command or special bootstrap step for the package itself.
+Then install the OpenAI Agents SDK yourself:
+
+```powershell
+pip install openai-agents
+```
+
+Or install both with the convenience extra:
+
+```powershell
+pip install "local-web-search[agents]"
+```
+
+> [!WARNING]
+> Docker Engine must be running. With `build_container_if_missing=True`, Local
+> Web Search starts the bundled SearXNG container automatically when it is
+> missing or stopped.
+
+Use the ready-made `web_search` and `web_fetch` tools in an agent:
+
+```python
+from agents import Agent, Runner
+from local_agentic_search.agent_tools import build_agent_tools
+
+web_search, web_fetch = build_agent_tools(build_container_if_missing=True)
+
+agent = Agent(
+    name="Research assistant",
+    instructions=(
+        "Use web_search for current web information. Search results are "
+        "snippets. Call web_fetch with a result_id before relying on page "
+        "details not present in a snippet."
+    ),
+    model="gpt-4.1-mini",
+    tools=[web_search, web_fetch],
+)
+
+result = Runner.run_sync(agent, "Find recent information about Crawl4AI.")
+print(result.final_output)
+```
+
+That is the main path: install the package, install the Agents SDK directly or
+through the extra, keep Docker Engine running, and let `build_agent_tools()` do
+the SearXNG startup.
 
 ## What It Does
 
@@ -93,18 +136,24 @@ from local_agentic_search import LocalSearchService
 
 ## Optional Integrations
 
-Most users do not need extras. Start with:
+Most users do not need extras. The base package is enough for the CLI, direct
+Python usage, and custom tool loops:
 
 ```powershell
 pip install local-web-search
 ```
 
-Use an extra only when you need the integration it names:
+If you want the OpenAI Agents SDK path, you can either install the SDK manually:
 
 ```powershell
-pip install "local-web-search[server]"
+pip install local-web-search
+pip install openai-agents
+```
+
+Or use the extra as a shortcut:
+
+```powershell
 pip install "local-web-search[agents]"
-pip install "local-web-search[server,agents]"
 ```
 
 What each extra adds:
@@ -113,7 +162,7 @@ What each extra adds:
 | --- | --- | --- | --- |
 | `local-web-search` | CLI, Python service, SearXNG client, Crawl4AI fetch support | You want local search/fetch from the CLI or your own Python code | This is the normal path |
 | `local-web-search[server]` | FastAPI and Uvicorn | You want `local-web-search serve` and HTTP routes | The CLI and direct Python imports do not need an HTTP server |
-| `local-web-search[agents]` | OpenAI Agents SDK adapter | You want ready-made `web_search` and `web_fetch` tools for an `Agent` | The CLI, HTTP API, and custom tool loops do not need the Agents SDK |
+| `local-web-search[agents]` | OpenAI Agents SDK | You want ready-made `web_search` and `web_fetch` tools for an `Agent` | You can also install `openai-agents` yourself |
 | `local-web-search[server,agents]` | Both integration layers | You want both the HTTP API and OpenAI Agents SDK helper tools | Most projects use one integration layer at a time |
 
 The integrations are intentionally separate because the base package already
@@ -177,13 +226,20 @@ full command reference.
 
 ## OpenAI Agents SDK Usage
 
-Install the Agents SDK integration only for this path:
+Install Local Web Search plus the OpenAI Agents SDK:
+
+```powershell
+pip install local-web-search
+pip install openai-agents
+```
+
+Or use the convenience extra:
 
 ```powershell
 pip install "local-web-search[agents]"
 ```
 
-Then build tools named `web_search` and `web_fetch`:
+With Docker Engine running, build tools named `web_search` and `web_fetch`:
 
 ```python
 from agents import Agent, Runner
@@ -206,9 +262,9 @@ result = Runner.run_sync(agent, "Find recent information about Crawl4AI.")
 print(result.final_output)
 ```
 
-By default, `build_agent_tools()` assumes Docker/SearXNG is already running and
-prints a yellow console warning once per process. To let the tool factory start
-SearXNG when the container is missing or stopped:
+By default, `build_agent_tools()` assumes SearXNG is already running and prints
+a yellow console warning once per process. To let the tool factory start SearXNG
+when the container is missing or stopped:
 
 ```python
 web_search, web_fetch = build_agent_tools(build_container_if_missing=True)
@@ -344,22 +400,6 @@ Environment variables:
 The automatic Docker path uses a fast `docker container inspect` check. If the
 configured container is paused, it runs `docker container unpause`; if it is
 missing or stopped, it runs `docker compose up -d --build searxng`.
-
-## Publishing
-
-The repository includes GitHub Actions for CI and PyPI publishing. The publish
-workflow runs on every push to `main` and on manual dispatch. It checks PyPI for
-existing `local-web-search` releases, bumps the patch version if necessary,
-commits that version bump back to `main`, then builds and publishes with PyPI
-Trusted Publishing.
-
-To enable publishing, add a PyPI Trusted Publisher for:
-
-- PyPI project: `local-web-search`
-- Owner: `maestromaximo`
-- Repository: `local-web-search`
-- Workflow: `publish.yml`
-- Environment: `pypi`
 
 ## License and Notices
 

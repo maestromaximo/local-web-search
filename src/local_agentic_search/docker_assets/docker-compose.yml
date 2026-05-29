@@ -1,0 +1,19 @@
+services:
+  searxng:
+    image: docker.io/searxng/searxng:2026.5.25-28ef4f744
+    pull_policy: if_not_present
+    container_name: local-agentic-search-searxng
+    ports:
+      - "${LOCAL_WEB_SEARCH_SEARXNG_BIND:-127.0.0.1}:${LOCAL_WEB_SEARCH_SEARXNG_PORT:-8888}:8080"
+    volumes:
+      - ./docker/searxng:/etc/searxng:rw
+      - searxng-cache:/var/cache/searxng:rw
+    environment:
+      SEARXNG_BASE_URL: "http://localhost:${LOCAL_WEB_SEARCH_SEARXNG_PORT:-8888}/"
+      SEARXNG_SECRET: "local-agentic-search-dev-secret"
+    cap_drop:
+      - ALL
+    restart: unless-stopped
+
+volumes:
+  searxng-cache:

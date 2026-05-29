@@ -276,6 +276,20 @@ def test_docker_ensure_passes_custom_port_to_compose_env(
     assert compose_env["LOCAL_WEB_SEARCH_SEARXNG_PORT"] == "8899"
 
 
+def test_docker_resolves_packaged_compose_file_outside_repo(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("LOCAL_WEB_SEARCH_DOCKER_COMPOSE_FILE", raising=False)
+
+    compose_file = docker_helpers._resolve_compose_file(None)
+
+    assert compose_file.name == "docker-compose.yml"
+    assert compose_file.parent.name == "docker_assets"
+    assert compose_file.exists()
+
+
 def test_docker_warning_is_yellow_and_suppressible(capsys) -> None:
     docker_helpers._DOCKER_WARNING_SHOWN = False
 
