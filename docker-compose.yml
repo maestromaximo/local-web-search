@@ -4,12 +4,12 @@ services:
     pull_policy: if_not_present
     container_name: local-agentic-search-searxng
     ports:
-      - "8888:8080"
+      - "${LOCAL_WEB_SEARCH_SEARXNG_BIND:-127.0.0.1}:${LOCAL_WEB_SEARCH_SEARXNG_PORT:-8888}:8080"
     volumes:
       - ./docker/searxng:/etc/searxng:rw
       - searxng-cache:/var/cache/searxng:rw
     environment:
-      SEARXNG_BASE_URL: "http://localhost:8888/"
+      SEARXNG_BASE_URL: "http://localhost:${LOCAL_WEB_SEARCH_SEARXNG_PORT:-8888}/"
       SEARXNG_SECRET: "local-agentic-search-dev-secret"
     cap_drop:
       - ALL

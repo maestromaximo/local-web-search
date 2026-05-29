@@ -118,6 +118,25 @@ SearXNG when the container is missing or stopped:
 web_search, web_fetch = build_agent_tools(build_container_if_missing=True)
 ```
 
+If port `8888` is already used on the host, choose another host port and keep
+Docker plus the Python client aligned:
+
+```python
+web_search, web_fetch = build_agent_tools(
+    build_container_if_missing=True,
+    searxng_port=8899,
+)
+```
+
+If the SearXNG container is already running on the old port, recreate it after
+changing ports:
+
+```powershell
+docker compose down
+$env:LOCAL_WEB_SEARCH_SEARXNG_PORT = "8899"
+docker compose up -d searxng
+```
+
 To silence the warning while keeping startup manual:
 
 ```python
@@ -205,6 +224,12 @@ Environment variables:
 - `LOCAL_WEB_SEARCH_CRAWL_TIMEOUT_MS`: Crawl4AI timeout, defaults to `45000`
 - `LOCAL_WEB_SEARCH_DOCKER_COMPOSE_FILE`: optional compose file path
 - `LOCAL_WEB_SEARCH_DOCKER_CONTAINER`: optional SearXNG container name
+- `LOCAL_WEB_SEARCH_SEARXNG_HOST`: host used by the Python client when
+  `SEARXNG_BASE_URL` is unset, defaults to `127.0.0.1`
+- `LOCAL_WEB_SEARCH_SEARXNG_PORT`: host port for the bundled SearXNG service,
+  defaults to `8888`
+- `LOCAL_WEB_SEARCH_SEARXNG_BIND`: Docker bind address for the bundled SearXNG
+  service, defaults to `127.0.0.1`
 
 The automatic Docker path uses a fast `docker container inspect` check. If the
 configured container is paused, it runs `docker container unpause`; if it is

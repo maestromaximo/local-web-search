@@ -5,7 +5,7 @@ import subprocess
 from pathlib import Path
 
 import local_agentic_search.docker as docker_helpers
-from local_agentic_search.agent_tools import _compact_search_payload
+from local_agentic_search.agent_tools import _agent_tools_config, _compact_search_payload
 from local_agentic_search.cache import SQLiteSearchCache
 from local_agentic_search.config import LocalSearchConfig
 from local_agentic_search.crawler import CrawledPage
@@ -94,6 +94,25 @@ def test_responses_tool_schemas_are_named_for_web_tools() -> None:
     schemas = responses_tool_schemas()
     assert [schema["name"] for schema in schemas] == ["web_search", "web_fetch"]
     assert all(schema["type"] == "function" for schema in schemas)
+
+
+def test_config_uses_searxng_port_env(monkeypatch) -> None:
+    monkeypatch.delenv("SEARXNG_BASE_URL", raising=False)
+    monkeypatch.setenv("LOCAL_WEB_SEARCH_SEARXNG_PORT", "8899")
+
+    config = LocalSearchConfig.from_env()
+
+    assert config.searxng_base_url == "http://127.0.0.1:8899"
+
+
+def test_agent_tools_config_accepts_port() -> None:
+    config = _agent_tools_config(
+        searxng_base_url=None,
+        searxng_port=8899,
+        searxng_host="127.0.0.1",
+    )
+
+    assert config.searxng_base_url == "http://127.0.0.1:8899"
 
 
 def test_cli_help_includes_examples(capsys) -> None:
@@ -231,6 +250,30 @@ def test_docker_ensure_starts_compose_when_container_is_not_running(
         "--build",
         "searxng",
     ]
+
+
+def test_docker_ensure_passes_custom_port_to_compose_env(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    compose_file = tmp_path / "docker-compose.yml"
+    compose_file.write_text("services:\n  searxng:\n    image: searxng/searxng\n")
+    calls: list[tuple[list[str], dict[str, object]]] = []
+
+    def fake_run(args: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        calls.append((args, kwargs))
+        if args[:3] == ["docker", "container", "inspect"]:
+            return subprocess.CompletedProcess(args, 1, stdout="", stderr="")
+        return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(docker_helpers.shutil, "which", lambda name: "docker")
+    monkeypatch.setattr(docker_helpers.subprocess, "run", fake_run)
+
+    docker_helpers.ensure_search_container_running(compose_file=compose_file, host_port=8899)
+
+    compose_env = calls[1][1]["env"]
+    assert isinstance(compose_env, dict)
+    assert compose_env["LOCAL_WEB_SEARCH_SEARXNG_PORT"] == "8899"
 
 
 def test_docker_warning_is_yellow_and_suppressible(capsys) -> None:

@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Annotated, Any, Literal
 
 from pydantic import Field
 
+from local_agentic_search.config import LocalSearchConfig
 from local_agentic_search.docker import ensure_search_container_running, warn_docker_not_managed
 from local_agentic_search.models import FetchResponse, SearchResponse
 from local_agentic_search.service import LocalSearchService
@@ -91,6 +93,9 @@ def build_agent_tools(
     *,
     build_container_if_missing: bool = False,
     suppress_docker_warning: bool = False,
+    searxng_base_url: str | None = None,
+    searxng_port: int | None = None,
+    searxng_host: str = "127.0.0.1",
 ) -> tuple[Any, Any]:
     """Build OpenAI Agents SDK tools named web_search and web_fetch."""
     try:
@@ -101,12 +106,23 @@ def build_agent_tools(
             "`pip install local-web-search[agents]`."
         ) from exc
 
+    if service is not None and (searxng_base_url is not None or searxng_port is not None):
+        raise ValueError("Pass either service or SearXNG connection options, not both.")
+    if searxng_base_url is not None and searxng_port is not None:
+        raise ValueError("Pass either searxng_base_url or searxng_port, not both.")
+
     if build_container_if_missing:
-        ensure_search_container_running()
+        ensure_search_container_running(host_port=searxng_port)
     elif service is None:
         warn_docker_not_managed(suppress=suppress_docker_warning)
 
-    search_service = service or LocalSearchService.from_env()
+    search_service = service or LocalSearchService(
+        _agent_tools_config(
+            searxng_base_url=searxng_base_url,
+            searxng_port=searxng_port,
+            searxng_host=searxng_host,
+        )
+    )
 
     @function_tool
     async def web_search(
@@ -227,3 +243,17 @@ def build_agent_tools(
         return _compact_fetch_payload(response)
 
     return web_search, web_fetch
+
+
+def _agent_tools_config(
+    *,
+    searxng_base_url: str | None,
+    searxng_port: int | None,
+    searxng_host: str,
+) -> LocalSearchConfig:
+    config = LocalSearchConfig.from_env()
+    if searxng_base_url is not None:
+        return replace(config, searxng_base_url=searxng_base_url.rstrip("/"))
+    if searxng_port is not None:
+        return replace(config, searxng_base_url=f"http://{searxng_host}:{searxng_port}")
+    return config

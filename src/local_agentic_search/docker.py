@@ -12,6 +12,8 @@ DEFAULT_INSPECT_TIMEOUT_SECONDS = 1.0
 
 _COMPOSE_FILE_ENV = "LOCAL_WEB_SEARCH_DOCKER_COMPOSE_FILE"
 _CONTAINER_NAME_ENV = "LOCAL_WEB_SEARCH_DOCKER_CONTAINER"
+_SEARXNG_BIND_ENV = "LOCAL_WEB_SEARCH_SEARXNG_BIND"
+_SEARXNG_PORT_ENV = "LOCAL_WEB_SEARCH_SEARXNG_PORT"
 _DOCKER_WARNING_SHOWN = False
 _CONTAINER_RUNNING = "running"
 _CONTAINER_PAUSED = "paused"
@@ -43,6 +45,8 @@ def ensure_search_container_running(
     container_name: str | None = None,
     compose_file: str | Path | None = None,
     service: str = DEFAULT_COMPOSE_SERVICE,
+    bind_host: str | None = None,
+    host_port: int | None = None,
     inspect_timeout_seconds: float = DEFAULT_INSPECT_TIMEOUT_SECONDS,
 ) -> bool:
     """Ensure the local SearXNG container is running.
@@ -83,6 +87,7 @@ def ensure_search_container_running(
         subprocess.run(
             command,
             cwd=resolved_compose_file.parent,
+            env=_compose_env(bind_host=bind_host, host_port=host_port),
             check=True,
             capture_output=True,
             text=True,
@@ -96,6 +101,15 @@ def ensure_search_container_running(
         ) from exc
 
     return True
+
+
+def _compose_env(*, bind_host: str | None, host_port: int | None) -> dict[str, str]:
+    env = os.environ.copy()
+    if bind_host is not None:
+        env[_SEARXNG_BIND_ENV] = bind_host
+    if host_port is not None:
+        env[_SEARXNG_PORT_ENV] = str(host_port)
+    return env
 
 
 def _warn_container_will_be_started(container_name: str) -> None:
