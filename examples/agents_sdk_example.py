@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from agents import Agent, Runner
+from dotenv import load_dotenv
 
 from local_agentic_search.agent_tools import build_agent_tools
 
-web_search, web_fetch = build_agent_tools()
+load_dotenv()
+web_search, web_fetch = build_agent_tools(build_container_if_missing=True)
 
 agent = Agent(
     name="Research assistant",

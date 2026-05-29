@@ -17,6 +17,25 @@ from local_agentic_search.utils import (
     stable_json,
 )
 
+_TIME_RANGE_ALIASES = {
+    "": None,
+    "none": None,
+    "null": None,
+    "any": None,
+    "all": None,
+    "d": "day",
+    "day": "day",
+    "daily": "day",
+    "m": "month",
+    "mo": "month",
+    "month": "month",
+    "monthly": "month",
+    "y": "year",
+    "yr": "year",
+    "year": "year",
+    "yearly": "year",
+}
+
 
 class LocalSearchService:
     def __init__(
@@ -62,6 +81,7 @@ class LocalSearchService:
     ) -> SearchResponse:
         max_results = max(1, min(max_results, 20))
         page = max(1, page)
+        time_range = self._normalize_time_range(time_range)
         params = {
             "query": query,
             "max_results": max_results,
@@ -97,7 +117,11 @@ class LocalSearchService:
             suggestions=[compact_text(item) for item in raw.get("suggestions", []) if item],
             answers=[compact_text(item) for item in raw.get("answers", []) if item],
             cache_hit=False,
-            warnings=[compact_text(item) for item in raw.get("unresponsive_engines", []) if item],
+            warnings=[
+                self._format_engine_warning(item)
+                for item in raw.get("unresponsive_engines", [])
+                if item
+            ],
         )
         self.cache.save_search(response, params)
         return response
@@ -293,6 +317,27 @@ class LocalSearchService:
     def _bounded_fetch_chars(self, max_chars: int | None) -> int:
         requested = max_chars or self.config.default_fetch_chars
         return max(1, min(requested, self.config.max_fetch_chars))
+
+    @staticmethod
+    def _normalize_time_range(time_range: str | None) -> str | None:
+        if time_range is None:
+            return None
+        normalized = _TIME_RANGE_ALIASES.get(compact_text(time_range).lower())
+        if normalized is not None or compact_text(time_range).lower() in _TIME_RANGE_ALIASES:
+            return normalized
+        return None
+
+    @staticmethod
+    def _format_engine_warning(item: Any) -> str:
+        if isinstance(item, (list, tuple)) and len(item) >= 2:
+            engine = compact_text(item[0])
+            reason = compact_text(item[1])
+            return f"{engine}: {reason}" if engine and reason else compact_text(item)
+        if isinstance(item, dict):
+            engine = compact_text(item.get("engine") or item.get("name"))
+            reason = compact_text(item.get("error") or item.get("reason") or item.get("message"))
+            return f"{engine}: {reason}" if engine and reason else compact_text(item)
+        return compact_text(item)
 
     @staticmethod
     def _extract_site_links(item: dict[str, Any]) -> list[SiteLink]:

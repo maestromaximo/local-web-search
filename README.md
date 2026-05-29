@@ -109,6 +109,27 @@ Environment variables:
 - `LOCAL_WEB_SEARCH_FETCH_CHARS`: default fetch slice size, defaults to `4000`
 - `LOCAL_WEB_SEARCH_MAX_FETCH_CHARS`: maximum fetch slice size, defaults to `20000`
 
+By default, `build_agent_tools()` assumes Docker/SearXNG is already running and prints a
+yellow console warning once per process. To let the tool factory start SearXNG when the
+container is missing or stopped:
+
+```python
+web_search, web_fetch = build_agent_tools(build_container_if_missing=True)
+```
+
+To silence the warning while keeping startup fully manual:
+
+```python
+web_search, web_fetch = build_agent_tools(suppress_docker_warning=True)
+```
+
+The automatic path uses a fast `docker container inspect` check. If the configured
+container is paused, it runs `docker container unpause`; if it is missing or stopped, it
+runs `docker compose up -d --build searxng`. Set
+`LOCAL_WEB_SEARCH_DOCKER_COMPOSE_FILE` if your compose file is outside the current
+working directory or this repository, and `LOCAL_WEB_SEARCH_DOCKER_CONTAINER` if you use
+a different container name.
+
 ## HTTP API
 
 - `GET /health`
