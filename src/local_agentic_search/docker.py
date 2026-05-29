@@ -191,7 +191,9 @@ def _resolve_compose_file(compose_file: str | Path | None) -> Path:
         path = Path(os.environ[_COMPOSE_FILE_ENV]).expanduser()
     else:
         cwd_compose_file = Path.cwd() / "docker-compose.yml"
-        package_compose_file = Path(__file__).resolve().parent / "docker_assets" / "docker-compose.yml"
+        package_compose_file = (
+            Path(__file__).resolve().parent / "docker_assets" / "docker-compose.yml"
+        )
         repo_compose_file = Path(__file__).resolve().parents[2] / "docker-compose.yml"
         if cwd_compose_file.exists():
             path = cwd_compose_file
