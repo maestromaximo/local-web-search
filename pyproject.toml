@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "local-web-search"
-version = "0.1.4"
+version = "0.1.5"
 description = "Agent-friendly local web search using SearXNG for snippets and Crawl4AI for full-text retrieval."
 readme = "README.md"
 requires-python = ">=3.10"
