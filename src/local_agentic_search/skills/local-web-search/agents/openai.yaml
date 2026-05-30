@@ -1,0 +1,4 @@
+interface:
+  display_name: "Local Web Search"
+  short_description: "Local web search tools for agents"
+  default_prompt: "Use $local-web-search to add local web_search and web_fetch tools to an OpenAI Agents SDK project."
