@@ -32,6 +32,7 @@ classifiers = [
 
 [project.optional-dependencies]
 agents = ["openai-agents>=0.15"]
+litellm = ["openai-agents[litellm]>=0.15"]
 server = ["fastapi>=0.115", "uvicorn[standard]>=0.30"]
 dev = ["build>=1.2", "pytest>=8.2", "ruff>=0.6", "twine>=5.1"]
 

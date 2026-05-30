@@ -41,6 +41,16 @@ Or install both with the convenience extra:
 pip install "local-web-search[agents]"
 ```
 
+To add repo-local development guidance for agentic coding tools, run this from
+the project that will use Local Web Search:
+
+```powershell
+local-web-search skill load
+```
+
+The command writes `.agents/skills/local-web-search` with usage guidance for the
+OpenAI Agents SDK, LiteLLM-style model adapters, Docker, SearXNG, and Crawl4AI.
+
 > [!WARNING]
 > Docker Engine must be running. With `build_container_if_missing=True`, Local
 > Web Search starts the bundled SearXNG container automatically when it is
@@ -163,6 +173,7 @@ What each extra adds:
 | `local-web-search` | CLI, Python service, SearXNG client, Crawl4AI fetch support | You want local search/fetch from the CLI or your own Python code | This is the normal path |
 | `local-web-search[server]` | FastAPI and Uvicorn | You want `local-web-search serve` and HTTP routes | The CLI and direct Python imports do not need an HTTP server |
 | `local-web-search[agents]` | OpenAI Agents SDK | You want ready-made `web_search` and `web_fetch` tools for an `Agent` | You can also install `openai-agents` yourself |
+| `local-web-search[litellm]` | OpenAI Agents SDK with LiteLLM adapter dependencies | You want the Agents SDK helper tools with a LiteLLM-backed model | OpenAI-only workflows do not need LiteLLM |
 | `local-web-search[server,agents]` | Both integration layers | You want both the HTTP API and OpenAI Agents SDK helper tools | Most projects use one integration layer at a time |
 
 The integrations are intentionally separate because the base package already
@@ -211,6 +222,12 @@ Run the HTTP API:
 local-web-search serve --host 127.0.0.1 --port 8099
 ```
 
+Install the repo-local development skill:
+
+```powershell
+local-web-search skill load
+```
+
 ## CLI
 
 ```text
@@ -219,6 +236,7 @@ local-web-search search "query" [--max-results 5] [--language en]
 local-web-search fetch res_... [--start 0] [--max-chars 4000]
 local-web-search fetch https://example.com [--max-chars 4000]
 local-web-search serve [--host 127.0.0.1] [--port 8099]
+local-web-search skill load [--project-dir .] [--force]
 ```
 
 Run `local-web-search --help` or `local-web-search <command> --help` for the
@@ -294,6 +312,40 @@ To silence the warning while keeping startup manual:
 ```python
 web_search, web_fetch = build_agent_tools(suppress_docker_warning=True)
 ```
+
+### LiteLLM or special model adapters
+
+The Local Web Search tools are local OpenAI Agents SDK function tools, so they
+can stay attached to the agent while you change the model adapter:
+
+```powershell
+pip install "local-web-search[litellm]"
+```
+
+```python
+from agents import Agent, Runner
+from agents.extensions.models.litellm_model import LitellmModel
+from local_agentic_search.agent_tools import build_agent_tools
+
+web_search, web_fetch = build_agent_tools(build_container_if_missing=True)
+
+agent = Agent(
+    name="Research assistant",
+    instructions=(
+        "Use web_search for current web information. Search results are "
+        "snippets. Call web_fetch with a result_id before relying on page "
+        "details not present in a snippet."
+    ),
+    model=LitellmModel(model="openai/gpt-4.1-mini"),
+    tools=[web_search, web_fetch],
+)
+
+result = Runner.run_sync(agent, "Find recent information about SearXNG.")
+print(result.final_output)
+```
+
+Validate tool calling, streaming, usage reporting, and tracing against the exact
+provider behind LiteLLM before relying on it in production.
 
 ## Responses API Tool Schemas
 

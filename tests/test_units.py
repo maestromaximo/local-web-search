@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import subprocess
 from pathlib import Path
+
+import pytest
 
 import local_agentic_search.docker as docker_helpers
 from local_agentic_search.agent_tools import _agent_tools_config, _compact_search_payload
@@ -10,6 +13,7 @@ from local_agentic_search.cache import SQLiteSearchCache
 from local_agentic_search.config import LocalSearchConfig
 from local_agentic_search.crawler import CrawledPage
 from local_agentic_search.service import LocalSearchService
+from local_agentic_search.skill_loader import load_skill
 from local_agentic_search.tool_schemas import responses_tool_schemas
 
 
@@ -129,6 +133,42 @@ def test_cli_help_includes_examples(capsys) -> None:
     assert "Examples:" in captured.out
     assert "local-web-search doctor" in captured.out
     assert "local-web-search search" in captured.out
+    assert "local-web-search skill load" in captured.out
+
+
+def test_skill_load_copies_packaged_skill(tmp_path: Path) -> None:
+    result = load_skill(project_dir=tmp_path)
+    skill_dir = tmp_path / ".agents" / "skills" / "local-web-search"
+
+    assert result.destination == skill_dir.resolve()
+    assert result.overwritten is False
+    assert (skill_dir / "SKILL.md").exists()
+    assert (skill_dir / "agents" / "openai.yaml").exists()
+    assert (skill_dir / "references" / "openai-agents-sdk.md").exists()
+    assert "build_agent_tools" in (skill_dir / "SKILL.md").read_text()
+
+
+def test_skill_load_refuses_existing_destination_without_force(tmp_path: Path) -> None:
+    load_skill(project_dir=tmp_path)
+
+    with pytest.raises(FileExistsError):
+        load_skill(project_dir=tmp_path)
+
+
+def test_cli_skill_load_prints_destination(tmp_path: Path, capsys) -> None:
+    from local_agentic_search.cli import build_parser
+
+    parser = build_parser()
+    args = parser.parse_args(["skill", "load", "--project-dir", str(tmp_path)])
+
+    assert args.func(args) == 0
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+
+    assert payload["skill_name"] == "local-web-search"
+    assert payload["destination"] == str(
+        (tmp_path / ".agents" / "skills" / "local-web-search").resolve()
+    )
 
 
 def test_search_normalizes_time_range_shorthand(tmp_path: Path) -> None:

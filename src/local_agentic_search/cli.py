@@ -7,6 +7,7 @@ import sys
 from typing import Any
 
 from local_agentic_search.service import LocalSearchService
+from local_agentic_search.skill_loader import load_skill
 
 
 def _print_json(payload: dict[str, Any]) -> None:
@@ -77,6 +78,20 @@ async def _doctor(args: argparse.Namespace) -> int:
     return 1
 
 
+def _skill_load(args: argparse.Namespace) -> int:
+    try:
+        result = load_skill(
+            project_dir=None if args.target_dir else args.project_dir,
+            target_dir=args.target_dir,
+            force=args.force,
+        )
+    except (FileExistsError, ValueError, RuntimeError) as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+    _print_json(result.model_dump())
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="local-web-search",
@@ -90,7 +105,8 @@ def build_parser() -> argparse.ArgumentParser:
             "  local-web-search search \"OpenAI Agents SDK tools\" --max-results 5\n"
             "  local-web-search fetch res_abc123 --max-chars 4000\n"
             "  local-web-search fetch https://example.com --max-chars 4000\n"
-            "  local-web-search serve --host 127.0.0.1 --port 8099"
+            "  local-web-search serve --host 127.0.0.1 --port 8099\n"
+            "  local-web-search skill load"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -155,6 +171,36 @@ def build_parser() -> argparse.ArgumentParser:
         description="Print the active configuration and whether the SearXNG endpoint is reachable.",
     )
     doctor.set_defaults(func=lambda args: asyncio.run(_doctor(args)))
+
+    skill = subcommands.add_parser(
+        "skill",
+        help="Install the Local Web Search development skill.",
+        description="Install project-local skill assets for agentic coding tools.",
+    )
+    skill_subcommands = skill.add_subparsers(dest="skill_command", required=True)
+    skill_load = skill_subcommands.add_parser(
+        "load",
+        help="Copy the packaged skill into .agents/skills/local-web-search.",
+        description=(
+            "Copy the packaged Local Web Search skill into a repo-local "
+            ".agents/skills/local-web-search directory."
+        ),
+    )
+    skill_load.add_argument(
+        "--project-dir",
+        default=".",
+        help="Project root where .agents/skills/local-web-search will be created.",
+    )
+    skill_load.add_argument(
+        "--target-dir",
+        help="Exact destination skill directory. Cannot be combined with --project-dir.",
+    )
+    skill_load.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite packaged skill files when the destination already exists.",
+    )
+    skill_load.set_defaults(func=_skill_load)
 
     return parser
 
