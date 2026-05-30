@@ -186,12 +186,15 @@ def build_parser() -> argparse.ArgumentParser:
             ".agents/skills/local-web-search directory."
         ),
     )
-    skill_load.add_argument(
+    skill_load_paths = skill_load.add_mutually_exclusive_group()
+    skill_load_paths.add_argument(
         "--project-dir",
-        default=".",
-        help="Project root where .agents/skills/local-web-search will be created.",
+        help=(
+            "Project root where .agents/skills/local-web-search will be created. "
+            "Defaults to the current directory."
+        ),
     )
-    skill_load.add_argument(
+    skill_load_paths.add_argument(
         "--target-dir",
         help="Exact destination skill directory. Cannot be combined with --project-dir.",
     )

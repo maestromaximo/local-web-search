@@ -171,6 +171,24 @@ def test_cli_skill_load_prints_destination(tmp_path: Path, capsys) -> None:
     )
 
 
+def test_cli_skill_load_rejects_conflicting_destination_options(tmp_path: Path) -> None:
+    from local_agentic_search.cli import build_parser
+
+    parser = build_parser()
+
+    with pytest.raises(SystemExit):
+        parser.parse_args(
+            [
+                "skill",
+                "load",
+                "--project-dir",
+                str(tmp_path),
+                "--target-dir",
+                str(tmp_path / "skill"),
+            ]
+        )
+
+
 def test_search_normalizes_time_range_shorthand(tmp_path: Path) -> None:
     service = _service(tmp_path)
     asyncio.run(service.search("example", time_range="y", refresh=True))
